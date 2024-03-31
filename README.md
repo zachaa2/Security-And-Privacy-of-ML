@@ -16,10 +16,6 @@ Paper - https://arxiv.org/pdf/2106.11133.pdf
 
 Code - https://github.com/LirongWu/GraphMixup
 
-Graph Structure Estimation Neural Networks
-
-Paper - https://dl.acm.org/doi/abs/10.1145/3442381.3449952
-
 A Systematic Survey on Deep Generative Models for Graph Generation
 
 Paper - https://ieeexplore.ieee.org/abstract/document/9920219?casa_token=36Q6CjB5x5kAAAAA:-zl2F4hDqlB2CzyQrCzD2Vgce38OYZ_lqD6Fd0lZCn0pTkvTEwQpmO1_tUAFqHsSd_GFr_hQ9A
