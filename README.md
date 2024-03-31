@@ -12,7 +12,7 @@ Code - https://github.com/ahxt/g-mixup/tree/master
 
 GraphMixup: Improving Class-Imbalanced Node Classification by Reinforcement Mixup and Self-supervised Context Prediction
 
-Paper - https://2022.ecmlpkdd.org/wp-content/uploads/2022/09/sub_375.pdf
+Paper - https://arxiv.org/pdf/2106.11133.pdf 
 
 Code - https://github.com/LirongWu/GraphMixup
 
