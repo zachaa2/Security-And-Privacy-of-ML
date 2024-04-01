@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 from torch_geometric.nn import GINConv, GCNConv, GraphConv, PNAConv
 from torch_geometric.nn import global_add_pool
-from ppgn import Powerful
+# from ppgn import Powerful
 
 # Decoder
 class Decoder(nn.Module):

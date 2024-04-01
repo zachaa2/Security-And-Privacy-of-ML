@@ -4,6 +4,7 @@ import random
 import scipy as sp
 
 import scipy.sparse as sparse
+import scipy.special as sc
 from tqdm import tqdm
 from torch import Tensor
 import networkx as nx
@@ -43,8 +44,8 @@ parser.add_argument('--epochs-denoise', type=int, default=100)
 parser.add_argument('--timesteps', type=int, default=500)
 parser.add_argument('--hidden-dim-denoise', type=int, default=512)
 parser.add_argument('--n-layers_denoise', type=int, default=3)
-parser.add_argument('--train-autoencoder', action='store_false', default=True)
-parser.add_argument('--train-denoiser', action='store_true', default=True)
+parser.add_argument('--train-autoencoder', action='store_false', default=False)
+parser.add_argument('--train-denoiser', action='store_true', default=False)
 parser.add_argument('--n-properties', type=int, default=15)
 parser.add_argument('--dim-condition', type=int, default=128)
 args = parser.parse_args()
@@ -57,11 +58,14 @@ gr2id = {graph_types[i]:i for i in range(len(graph_types))}
 
 
 data_lst = []
+'''
+This is for if the dataset is alread loaded and saved into a .pt file
+'''
 filename = f'data/generated_dataset.pt'
 
 stats_lst = []
 # traverse through all the graphs of the folder
-files = [f for f in os.listdir("generated data/graphs")]
+files = [f for f in os.listdir("data\\generated data\\graphs")]
 #files_stats = [f for f in os.listdir("/data/iakovos/Multimodal/generated data/stats")]
 print(len(files))
 if os.path.isfile(filename):
@@ -75,15 +79,15 @@ else:
     n_nodes = []
     max_eigval = 0
     min_eigval = 0
-    for fileread in tqdm(files):
+    for fileread in tqdm(files[0:(len(files) // 100)]):
         tokens = fileread.split("/")
         idx = tokens[-1].find(".")
         filen = tokens[-1][:idx]
         extension = tokens[-1][idx+1:]
         # filename = f'data/'+filen+'.pt'
         #self.ignore_first_eigv = ignore_first_eigv
-        fread = os.path.join("generated data/graphs",fileread)
-        fstats = os.path.join("generated data/stats",filen+".txt")
+        fread = os.path.join("data/generated data/graphs",fileread)
+        fstats = os.path.join("data/generated data/stats",filen+".txt")
         type = None
         for t in graph_types:
             if t in filen:
@@ -123,8 +127,8 @@ else:
         diags = np.squeeze(np.asarray(diags))
         D = sparse.diags(diags).toarray()
         L = D - adj_bfs
-        with sp.errstate(divide="ignore"):
-            diags_sqrt = 1.0 / np.sqrt(diags)
+        #with sc.errstate(divide="ignore"):
+        diags_sqrt = 1.0 / np.sqrt(diags)
         diags_sqrt[np.isinf(diags_sqrt)] = 0
         DH = sparse.diags(diags_sqrt).toarray()
         L = np.linalg.multi_dot((DH, L, DH))
@@ -183,6 +187,9 @@ trainable_params_autoenc = sum(p.numel() for p in autoencoder.parameters() if p.
 print("Number of Autoencoder's trainable parameters: "+str(trainable_params_autoenc))
 
 # Train autoencoder
+'''
+set args.train_autoencoder to true only if you don't want to use the checkpoint
+'''
 if args.train_autoencoder:
     best_val_loss = np.inf
     for epoch in range(1, args.epochs_autoencoder+1):
@@ -277,6 +284,9 @@ scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=500, gamma=0.1)
 trainable_params_diff = sum(p.numel() for p in denoise_model.parameters() if p.requires_grad)
 print("Number of Diffusion model's trainable parameters: "+str(trainable_params_diff))
 
+'''
+set args.train_denoiser to true only if you don't want to use the checkpoint
+'''
 if args.train_denoiser:
     # Train denoising model
     best_val_loss = np.inf
@@ -344,7 +354,7 @@ for k, data in enumerate(tqdm(test_loader, desc='Processing test set',)):
         #adj = autoencoder.decode_mu(samples[random_index])
         # Gs_generated.append(construct_nx_from_adj(adj[i,:,:].detach().cpu().numpy()))
         stat_x = stat_d[i]
-
+        ''' NetworkX graph from adj matrix '''
         Gs_generated = construct_nx_from_adj(adj[i,:,:].detach().cpu().numpy())
         stat_x = stat_x.detach().cpu().numpy()
         ground_truth.append(stat_x)
@@ -359,10 +369,10 @@ store_stats(ground_truth, pred, "y_stats.txt", "y_pred_stats.txt")
 mean, std = calculate_mean_std(ground_truth)
 
 
-mse, mae, norm_error = evaluation_metrics(ground_truth, y_pred)
+mse, mae, norm_error = evaluation_metrics(ground_truth, pred)
 
 
-mse_all, mae_all, norm_error_all, mean_perc_error_all = z_score_norm(ground_truth, pred, mean, std)
+mse_all, mae_all, norm_error_all = z_score_norm(ground_truth, pred, mean, std)
 
 
 
