@@ -73,3 +73,10 @@ Paper - https://proceedings.mlr.press/v97/bojchevski19a/bojchevski19a.pdf
 Paper - https://dl.acm.org/doi/pdf/10.1145/3485447.3512179?casa_token=fE_9f5eib9gAAAAA:OOtrkZFfpUy9jgWqyszbNSQ4byLyR0RfLK6mNlHjUbdnWXtCrarv3gOkorQZWBcw8xSWOmaJYEXK
 
 Code - https://github.com/RinneSz/CLGA
+
+**TDGIA: Effective Injection Attacks on Graph Neural Networks**
+
+paper - https://arxiv.org/pdf/2106.06663.pdf 
+
+code - https://github.com/THUDM/tdgia/tree/main 
+

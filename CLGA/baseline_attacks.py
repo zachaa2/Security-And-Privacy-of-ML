@@ -102,4 +102,5 @@ if args.method in ['random', 'dice', 'nodeembeddingattack', 'randomremove', 'ran
     modified_adj = torch.Tensor(model.modified_adj.todense())
 else:
     modified_adj = model.modified_adj  # modified_adj is a torch.tensor
+
 pkl.dump(modified_adj, open('poisoned_adj/%s_%s_%f_adj.pkl' % (args.dataset, args.method, args.rate), 'wb'))
