@@ -2,7 +2,7 @@
 
 ## Data
 
-**Graphs with non-overlapping communitiesin gml format**
+**Graphs with non-overlapping communities in gml format**
 
 link - https://github.com/vlivashkin/community-graphs/tree/master 
 
