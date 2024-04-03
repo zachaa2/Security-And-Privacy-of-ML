@@ -1,10 +1,16 @@
 # Security-And-Privacy-of-ML
 
+## Data
+
+**Graphs with non-overlapping communitiesin gml format**
+
+link - https://github.com/vlivashkin/community-graphs/tree/master 
+
 ## Relevant Literature 
 
 ### Synthetic Graph Generation Papers:
 
-**Very nice survey on graph generation papers and resources** -> https://github.com/yuanqidu/awesome-graph-generation?tab=readme-ov-file#Survey 
+**Survey on graph generation papers and resources** -> https://github.com/yuanqidu/awesome-graph-generation?tab=readme-ov-file#Survey 
 
 **G-Mixup: Graph Data Augmentation for Graph Classification - HERE**
 

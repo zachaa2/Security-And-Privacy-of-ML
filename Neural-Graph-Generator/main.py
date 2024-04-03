@@ -344,6 +344,7 @@ pred = []
 for k, data in enumerate(tqdm(test_loader, desc='Processing test set',)):
     data = data.to(device)
     stat = data.stats
+
     bs = stat.size(0)
     samples = sample(denoise_model, data.stats, latent_dim=args.latent_dim, timesteps=args.timesteps, betas=betas, batch_size=bs)
     x_sample = samples[-1]

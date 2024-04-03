@@ -71,7 +71,7 @@ def test(final=False):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--device', type=str, default='cuda:0')
+    parser.add_argument('--device', type=str, default='cpu')
     parser.add_argument('--dataset', type=str, default='Cora')
     parser.add_argument('--param', type=str, default='local:general.json')
     parser.add_argument('--seed', type=int, default=39788)
@@ -93,7 +93,7 @@ if __name__ == '__main__':
         'drop_feature_rate_1': 0.1,
         'drop_feature_rate_2': 0.0,
         'tau': 0.4,
-        'num_epochs': 3000,
+        'num_epochs': 10, # TEMP ARGUMENT
         'weight_decay': 1e-5,
         'drop_scheme': 'degree',
     }
