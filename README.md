@@ -12,6 +12,36 @@ link - https://github.com/vlivashkin/community-graphs/tree/master
 
 **Survey on graph generation papers and resources** -> https://github.com/yuanqidu/awesome-graph-generation?tab=readme-ov-file#Survey 
 
+**General Graph Generators: Experiments, Analyses, and Improvements**
+
+code - https://github.com/xiangsheng1325/GraphGenerator 
+
+**NetGAN: Generating Graphs via Random Walks - Experiments on CORA**
+
+paper - https://arxiv.org/pdf/1803.00816.pdf 
+
+code - https://github.com/danielzuegner/netgan 
+
+alternate code - https://github.com/xiangsheng1325/NetGAN-torch 
+
+**NetGAN without GAN: From Random Walks to Low-Rank Approximations - Experiments on CORA**
+
+paper - https://proceedings.mlr.press/v119/rendsburg20a/rendsburg20a.pdf 
+
+code - https://github.com/sverdoot/netgan-without-gan 
+
+**Large Graph Generation with HIGGS**
+
+paper - https://arxiv.org/pdf/2306.11412.pdf 
+
+code - https://github.com/higgs-neurips-23/HiGGs/tree/main 
+
+**DiGress: Discrete Denoising diffusion for graph generation**
+
+paper - https://arxiv.org/pdf/2209.14734.pdf
+
+code - https://github.com/cvignac/DiGress 
+
 **G-Mixup: Graph Data Augmentation for Graph Classification - HERE**
 
 paper - https://arxiv.org/pdf/2202.07179.pdf
@@ -29,12 +59,6 @@ Code - https://github.com/iakovosevdaimon/Neural-Graph-Generator
 paper - https://arxiv.org/pdf/2212.01842.pdf 
 
 code - https://github.com/GRAPH-0/GraphGDP 
-
-**DiGress: Discrete Denoising diffusion for graph generation**
-
-paper - https://arxiv.org/pdf/2209.14734.pdf
-
-code - https://github.com/cvignac/DiGress 
 
 **GraphMixup: Improving Class-Imbalanced Node Classification by Reinforcement Mixup and Self-supervised Context Prediction**
 
