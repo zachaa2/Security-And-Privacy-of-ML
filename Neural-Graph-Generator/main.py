@@ -348,6 +348,7 @@ for k, data in enumerate(tqdm(test_loader, desc='Processing test set',)):
     bs = stat.size(0)
     samples = sample(denoise_model, data.stats, latent_dim=args.latent_dim, timesteps=args.timesteps, betas=betas, batch_size=bs)
     x_sample = samples[-1]
+    print(x_sample.shape)
     adj = autoencoder.decode_mu(x_sample)
     stat_d = torch.reshape(stat, (-1, args.n_properties))
 

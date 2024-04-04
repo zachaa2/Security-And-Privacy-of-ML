@@ -58,6 +58,8 @@ def test(final=False):
         acc = log_regression(z, data, evaluator, split='cora', num_epochs=3000)['acc']
     elif args.dataset == 'CiteSeer':
         acc = log_regression(z, data, evaluator, split='citeseer', num_epochs=3000)['acc']
+    # else:
+    #     acc = log_regression(z, data, evaluator, num_epochs=3000)['acc']
     else:
         raise ValueError('Please check the split first!')
 
