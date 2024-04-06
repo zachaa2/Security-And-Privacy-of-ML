@@ -6,6 +6,8 @@ from netgan import utils
 import numpy as np
 import matplotlib.pyplot as plt
 
+import networkx as nx
+
 if __name__ == '__main__':
 
     ### load the data
@@ -60,7 +62,22 @@ if __name__ == '__main__':
     log_dict = train(netG, netD, _N, rw_len, val_ones, val_zeros, batch_size, walk.walk, _A_obs,
                     device=device, stopping=stopping, eval_every=eval_every, max_patience=20, max_iters=10)
     print(log_dict.keys())
+    
+    # get last generated graph from the validation logs
+    final_g = log_dict['generated_graphs'][-1]
+    print(type(final_g))
+    # convert generated and original adj matrices to networkx graphs
+    G = nx.from_numpy_array(final_g)
+    OG = nx.from_scipy_sparse_array(_A_obs)
 
+    # EDA
+    print("Original graph nodes:", OG.order())
+    print("Original graph edges:", OG.size())
+    
+    print("Generated graph nodes:", G.order())
+    print("Generated graph edges:", G.size())
+    
+    # plotting validation performance
     plt.plot(np.arange(len(log_dict['val_performances'])) * eval_every,
              np.array(log_dict['val_performances'])[:, 0], label='ROC-AUC')
     plt.plot(np.arange(len(log_dict['val_performances'])) * eval_every,
