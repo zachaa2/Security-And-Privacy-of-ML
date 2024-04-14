@@ -12,8 +12,10 @@ if __name__ == '__main__':
 
     ### load the data
     _A_obs, _X_obs, _z_obs = utils.load_npz("data/cora_ml.npz")
-
     _A_obs = _A_obs + _A_obs.T
+
+    matr = _A_obs.toarray()
+
     _A_obs[_A_obs > 1] = 1
     lcc = utils.largest_connected_components(_A_obs)
     _A_obs = _A_obs[lcc, :][:, lcc]
