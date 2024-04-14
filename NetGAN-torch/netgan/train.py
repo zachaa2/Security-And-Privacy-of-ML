@@ -107,7 +107,7 @@ def train(netG, netD, N, rw_len, val_ones, val_zeros, n_sample, Walker, A_orig, 
 
     print("**** start training ****")
     for _it in range(max_iters):
-        if _it > 0 and _it%(25) == 0:
+        if _it > 0 and _it % (10) == 0:
             t = time.time() - start_time
             print("{:<7}/{:<8} training iterations, took {} seconds so far...".format(_it, max_iters, int(t)))
 
