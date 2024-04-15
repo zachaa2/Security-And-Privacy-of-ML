@@ -24,7 +24,7 @@ fi
 cd NetGAN-torch/
 
 # Activate virtual environment
-source venv/Scripts/activate
+source venv/bin/activate
 
 # Run netgan for each rate and the given method
 for R in $RATES; do
