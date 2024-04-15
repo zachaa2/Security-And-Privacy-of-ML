@@ -3,7 +3,6 @@ pip install networkx
 pip install numpy
 pip install scipy
 pip install scikit-learn
-pip install utils
 pip install igraph
 pip install powerlaw
 pip install numba
