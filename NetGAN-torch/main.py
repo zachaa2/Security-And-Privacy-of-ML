@@ -121,7 +121,7 @@ if __name__ == '__main__':
     rw_len = 16
     batch_size = 128
     temperature = 5.0
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
     print('Using device:', device)
     print('Device Name:', torch.cuda.get_device_name(torch.cuda.current_device()))
 
