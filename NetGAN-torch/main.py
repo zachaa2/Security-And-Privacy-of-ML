@@ -139,11 +139,11 @@ if __name__ == '__main__':
         stopping = 0.5
 
     ### train model
-    eval_every = 200
+    eval_every = 1000
     # eval_every = 2
 
     log_dict = train(netG, netD, _N, rw_len, val_ones, val_zeros, batch_size, walk.walk, _A_obs,
-                    device=device, stopping=stopping, eval_every=eval_every, max_patience=20, max_iters=100000)
+                    device=device, stopping=stopping, eval_every=eval_every, max_patience=20, max_iters=75000)
     # log_dict = train(netG, netD, _N, rw_len, val_ones, val_zeros, batch_size, walk.walk, _A_obs,
     #                 device=device, stopping=stopping, eval_every=eval_every, max_patience=20, max_iters=10)
     print(log_dict.keys())
