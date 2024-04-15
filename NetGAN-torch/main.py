@@ -8,19 +8,84 @@ import matplotlib.pyplot as plt
 
 import networkx as nx
 
+import argparse
+from scipy.sparse import csr_matrix, lil_matrix
+import pickle as pkl
+
+def load_matrix_from_pickle(file_path):
+    """Load a csr SparseMatrix object from a pickle file."""
+    # binary file is of a tensor
+    with open(file_path, 'rb') as file:
+        tensor = pkl.load(file)
+    # convert tensor to csr SparseMatrix format
+    arr = tensor.numpy()
+    matr = csr_matrix(arr)
+    return matr
+
+def reintegrate_synthetic_lcc(orig, lcc, synth):
+    '''
+        Function to create the full synthetic graph by adding back the LCC to the original graph.
+        NetGAN considers only the LCC, so we need to combine the returned lcc with the non-lcc indices
+        from the original graph.
+        Params:
+            orig - original graph in csr form.
+            lcc - list of the lcc indices.
+            synth - a numpy array matrix which is the synthetic LCC.
+        Returns: 
+            new_adj_matrix - new full SparseMatrix in csr form. 
+    '''
+    # Convert original adj matrix to a LIL matrix for easier assignment
+    new_adj_matrix = orig.tolil()
+    
+    # Add the synthetic adjacency matrix from the LCC indices
+    for i, row in enumerate(lcc):
+        for j, col in enumerate(lcc):
+            new_adj_matrix[row, col] = synth[i, j]
+    
+    return new_adj_matrix.tocsr()
+
+def write_graph(adj, method, rate):
+    '''
+    Function to convert the SparceMatrix to a tensor object and write it to a pickle file.
+    Params: 
+        adj - CSR adjacency matrix of the full graph. 
+        method - attack method used to poison graph.
+        rate - poison rate used on the graph.
+    '''
+   # Convert CSR to dense numpy array
+    dense_array = adj.toarray()
+    # convert numpy to tensor
+    tensor = torch.tensor(dense_array, dtype=torch.float)
+    # save to pickle file
+    with open(f'data/Cora_{method}_{rate:.6f}_synthetic.pkl', 'wb') as f:
+        pkl.dump(tensor, f)
+
+
 if __name__ == '__main__':
+    # get args
+    parser = argparse.ArgumentParser(description="Load poisoned adjacency matrix from pickle file.")
+    parser.add_argument("--method", type=str, required=True, help="Attack method")
+    parser.add_argument("--rate", type=float, required=True, help="Perturbation rate")
+    
+    args = parser.parse_args()
+
+    # get the filepath of the poisoned adj matrix from the given attack method and rate
+    file_path = f'../CLGA/poisoned_adj/Cora_{args.method}_{args.rate:.6f}_adj.pkl' 
 
     ### load the data
-    _A_obs, _X_obs, _z_obs = utils.load_npz("data/cora_ml.npz")
-    _A_obs = _A_obs + _A_obs.T
+    _A_orig = load_matrix_from_pickle(file_path=file_path) # This is for the experiments
+    # _A_obs, _X_obs, _z_obs = utils.load_npz("data/cora_ml.npz") This is from the NetGAN paper 
+    
+    # convert to undirected representation
+    _A_orig = _A_orig + _A_orig.T
+    _A_orig[_A_orig > 1] = 1
 
-    matr = _A_obs.toarray()
-
-    _A_obs[_A_obs > 1] = 1
-    lcc = utils.largest_connected_components(_A_obs)
-    _A_obs = _A_obs[lcc, :][:, lcc]
+    # consider only the largest connected component
+    lcc = utils.largest_connected_components(_A_orig)
+    _A_obs = _A_orig[lcc, :][:, lcc]
     _N = _A_obs.shape[0]
-
+    
+    # get splits 
     val_share = 0.1
     test_share = 0.05
     seed = 481516234
@@ -66,11 +131,18 @@ if __name__ == '__main__':
     print(log_dict.keys())
     
     # get last generated graph from the validation logs
-    final_g = log_dict['generated_graphs'][-1]
-    print(type(final_g))
+    synthetic_lcc = log_dict['generated_graphs'][-1]
+    print(type(synthetic_lcc))
+
+    # get the new full graph by adding back the synthetic generated lcc into the original graph
+    new_g = reintegrate_synthetic_lcc(_A_orig, lcc, synthetic_lcc)
+
+    # write new synthetic graph to binary
+    write_graph(new_g, args.method, args.rate)
+
     # convert generated and original adj matrices to networkx graphs
-    G = nx.from_numpy_array(final_g)
-    OG = nx.from_scipy_sparse_array(_A_obs)
+    G = nx.from_scipy_sparse_array(new_g)
+    OG = nx.from_scipy_sparse_array(_A_orig)
 
     # EDA
     print("Original graph nodes:", OG.order())
@@ -79,11 +151,12 @@ if __name__ == '__main__':
     print("Generated graph nodes:", G.order())
     print("Generated graph edges:", G.size())
     
-    # plotting validation performance
-    plt.plot(np.arange(len(log_dict['val_performances'])) * eval_every,
-             np.array(log_dict['val_performances'])[:, 0], label='ROC-AUC')
-    plt.plot(np.arange(len(log_dict['val_performances'])) * eval_every,
-             np.array(log_dict['val_performances'])[:, 1], label='Avg.Perc')
-    plt.title('Validation')
-    plt.legend()
-    plt.show()
+
+    '''plotting validation performance'''
+    # plt.plot(np.arange(len(log_dict['val_performances'])) * eval_every,
+    #          np.array(log_dict['val_performances'])[:, 0], label='ROC-AUC')
+    # plt.plot(np.arange(len(log_dict['val_performances'])) * eval_every,
+    #          np.array(log_dict['val_performances'])[:, 1], label='Avg.Perc')
+    # plt.title('Validation')
+    # plt.legend()
+    # plt.show()

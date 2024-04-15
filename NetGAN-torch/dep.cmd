@@ -7,3 +7,4 @@ pip install utils
 pip install igraph
 pip install powerlaw
 pip install numba
+pip install argparse

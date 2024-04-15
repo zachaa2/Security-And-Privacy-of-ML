@@ -144,7 +144,7 @@ def train(netG, netD, N, rw_len, val_ones, val_zeros, n_sample, Walker, A_orig, 
             D_loss.backward()
 
             optimizerD.step()
-            print(D_loss)
+            # print(D_loss)
 
             _disc_l.append(D_loss.detach().cpu().numpy())
 
@@ -200,6 +200,30 @@ def train(netG, netD, N, rw_len, val_ones, val_zeros, n_sample, Walker, A_orig, 
                 break
 
     print("**** Training completed after {} iterations. ****".format(_it))
+
+    print("FINAL EVALUATION...")
+    # Sample lots of random walks
+    smpls = []
+    for _ in range(n_eval_iters):
+        sample_many = netG(sample_many_count, discrete=True)
+        smpls.append(sample_many.detach().cpu().numpy())
+
+    # Compute score matrix
+    gr = utils.score_matrix_from_random_walks(np.array(smpls).reshape([-1, rw_len]), N)
+    gr = gr.tocsr()
+
+    # Assemble a graph from the score matrix
+    _graph = utils.graph_from_scores(gr, A_orig.sum())
+    # Compute edge overlap
+    edge_overlap = utils.edge_overlap(A_orig.toarray(), _graph)
+    graphs.append(_graph)
+    eo.append(edge_overlap)
+
+    edge_scores = np.append(gr[tuple(val_ones.T)].A1, gr[tuple(val_zeros.T)].A1)
+    # Compute validation ROC_AUC and average precision scores
+    val_performance.append((roc_auc_score(actual_labels_val, edge_scores),
+                           average_precision_score(actual_labels_val, edge_scores)))
+    
 
     log_dict = {"disc_losses": disc_losses, 'gen_losses': gen_losses, 'val_performances': val_performance,
                 'edge_overlaps': eo, 'generated_graphs': graphs}

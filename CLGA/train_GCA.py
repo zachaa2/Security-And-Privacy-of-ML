@@ -133,8 +133,10 @@ if __name__ == '__main__':
     if args.perturb:
         try:
             perturbed_adj = pkl.load(open('poisoned_adj/%s_%s_%f_adj.pkl' % (args.dataset, args.attack_method, args.attack_rate), 'rb')).to(device)
+            # perturbed_adj = perturbed_adj + perturbed_adj.t()
         except:
             perturbed_adj = torch.load('poisoned_adj/%s_%s_%f_adj.pkl' % (args.dataset, args.attack_method, args.attack_rate), map_location=device)
+            # perturbed_adj = perturbed_adj + perturbed_adj.t()
         data.edge_index = perturbed_adj.nonzero().T
 
     data = data.to(device)
