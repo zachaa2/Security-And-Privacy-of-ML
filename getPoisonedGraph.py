@@ -29,7 +29,9 @@ def perform_eda(graph):
     print("Minimum Degree:", np.min(degrees))
     
     # Connected Components
-    print("Number of Connected Components:", nx.number_connected_components(graph))
+    connected_components = list(nx.connected_components(graph))
+    print("Number of Connected Components:", len(connected_components))
+    print("Sizes of Connected Components:", [len(c) for c in connected_components])
     
     # Clustering Coefficient
     print("Average Clustering Coefficient:", nx.average_clustering(graph))
