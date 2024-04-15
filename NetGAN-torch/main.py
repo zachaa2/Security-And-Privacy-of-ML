@@ -60,6 +60,18 @@ def write_graph(adj, method, rate):
     with open(f'data/Cora_{method}_{rate:.6f}_synthetic.pkl', 'wb') as f:
         pkl.dump(tensor, f)
 
+def write_logs(logs, method, rate):
+    '''
+    Function to write the logs (the output of the train function) to a binary
+    Params:
+        logs - dictionary which contains the logged data.
+        method - attack method used to poison graph.
+        rate - poison rate used on the graph.
+    '''
+    file_path = f'data/Cora_{method}_{rate:.6f}_logs.pkl'
+    with open(file_path, 'wb') as f:
+        pkl.dump(logs, f)
+    
 
 if __name__ == '__main__':
     # get args
@@ -68,6 +80,12 @@ if __name__ == '__main__':
     parser.add_argument("--rate", type=float, required=True, help="Perturbation rate")
     
     args = parser.parse_args()
+
+    '''
+    NOTE: Requires that the poisoned adj matrix exists in the filepath ../CLGA/poisoned_adj/ as a pickle file with the following name convention
+    Cora_{args.method}_{args.rate:.6f}_adj.pkl
+    If the poisoned adj is not there you must first run the script to poison the graph
+    '''
 
     # get the filepath of the poisoned adj matrix from the given attack method and rate
     file_path = f'../CLGA/poisoned_adj/Cora_{args.method}_{args.rate:.6f}_adj.pkl' 
@@ -121,24 +139,25 @@ if __name__ == '__main__':
         stopping = 0.5
 
     ### train model
-    # eval_every = 2000
+    # eval_every = 200
     eval_every = 2
 
     # log_dict = train(netG, netD, _N, rw_len, val_ones, val_zeros, batch_size, walk.walk, _A_obs,
-    #                 device=device, stopping=stopping, eval_every=eval_every, max_patience=20, max_iters=200000)
+    #                 device=device, stopping=stopping, eval_every=eval_every, max_patience=20, max_iters=100000)
     log_dict = train(netG, netD, _N, rw_len, val_ones, val_zeros, batch_size, walk.walk, _A_obs,
                     device=device, stopping=stopping, eval_every=eval_every, max_patience=20, max_iters=10)
     print(log_dict.keys())
     
     # get last generated graph from the validation logs
     synthetic_lcc = log_dict['generated_graphs'][-1]
-    print(type(synthetic_lcc))
+    # print(type(synthetic_lcc))
 
     # get the new full graph by adding back the synthetic generated lcc into the original graph
     new_g = reintegrate_synthetic_lcc(_A_orig, lcc, synthetic_lcc)
 
     # write new synthetic graph to binary
     write_graph(new_g, args.method, args.rate)
+    # write_logs(log_dict, args.method, args.rate)
 
     # convert generated and original adj matrices to networkx graphs
     G = nx.from_scipy_sparse_array(new_g)
