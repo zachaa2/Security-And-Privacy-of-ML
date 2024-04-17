@@ -70,6 +70,10 @@ def test(final=False):
 
     return acc
 
+def write_acc_to_file(acc, method, rate):
+    path = f'../data/Cora_{method}_{rate:.6f}_acc.txt'
+    with open(path, 'w') as file:
+        file.write(f'acc score: {acc}\n')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -124,20 +128,31 @@ if __name__ == '__main__':
     random.seed(12345)
 
     device = torch.device(args.device)
+    print('Using device:', device)
+    if 'cuda' in args.device: print('Device Name:', torch.cuda.get_device_name(torch.cuda.current_device()))
 
     path = osp.expanduser('dataset')
     path = osp.join(path, args.dataset)
     dataset = get_dataset(path, args.dataset)
     data = dataset[0]
 
+    '''
+        Load the perturbed adj from the synthetic data
+    '''
     if args.perturb:
         try:
-            perturbed_adj = pkl.load(open('poisoned_adj/%s_%s_%f_adj.pkl' % (args.dataset, args.attack_method, args.attack_rate), 'rb')).to(device)
-            # perturbed_adj = perturbed_adj + perturbed_adj.t()
+            '''uncomment this to use regular perturbed adj matrix'''
+            # perturbed_adj = pkl.load(open('poisoned_adj/%s_%s_%f_adj.pkl' % (args.dataset, args.attack_method, args.attack_rate), 'rb')).to(device) 
+            '''uncomment this to use synthetic perturbed adj matrix'''
+            perturbed_adj = pkl.load(open('../NetGAN-torch/data/%s_%s_%f_synthetic.pkl' % (args.dataset, args.attack_method, args.attack_rate), 'rb')).to(device)
+            
         except:
-            perturbed_adj = torch.load('poisoned_adj/%s_%s_%f_adj.pkl' % (args.dataset, args.attack_method, args.attack_rate), map_location=device)
-            # perturbed_adj = perturbed_adj + perturbed_adj.t()
+            '''uncomment this to use regular perturbed adj matrix'''
+            # perturbed_adj = torch.load('poisoned_adj/%s_%s_%f_adj.pkl' % (args.dataset, args.attack_method, args.attack_rate), map_location=device) 
+            '''uncomment this to use synthetic perturbed adj matrix'''
+            perturbed_adj = torch.load('../NetGAN-torch/data/%s_%s_%f_synthetic.pkl' % (args.dataset, args.attack_method, args.attack_rate), map_location=device)
         data.edge_index = perturbed_adj.nonzero().T
+
 
     data = data.to(device)
     edge_index = data.edge_index
@@ -215,3 +230,6 @@ if __name__ == '__main__':
     if acc > best_acc:
         best_acc = acc
     print(f'best accuracy = {best_acc}')
+
+    # write best acc to data folder in root dir
+    write_acc_to_file(acc=best_acc, method=args.attack_method, rate=args.attack_rate)
