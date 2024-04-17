@@ -163,6 +163,7 @@ def link_prediction(z,
     best_test_auc = 0
     best_val_auc = 0
     for epoch in range(num_epochs):
+        print(f'(LP) | Epoch={epoch:03d}')
         projecter.train()
         optimizer.zero_grad()
 

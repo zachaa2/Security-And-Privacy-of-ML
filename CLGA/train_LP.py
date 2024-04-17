@@ -38,8 +38,8 @@ def train():
     x_1 = data.x
     x_2 = data.x
 
-    z1 = model(x_1, edge_adj_1, sparse=False)
-    z2 = model(x_2, edge_adj_2, sparse=False)
+    z1 = model(x_1, edge_sp_adj_1)
+    z2 = model(x_2, edge_sp_adj_2)
 
     loss = model.loss(z1, z2, batch_size=1024 if args.dataset == 'Coauthor-Phy' else None)
     loss.backward()
@@ -61,6 +61,10 @@ def test(final=False):
 
     return auc
 
+def write_auc_to_file(auc, method, rate):
+    path = f'../data/Cora_{method}_{rate:.6f}_auc.txt'
+    with open(path, 'w') as file:
+        file.write(f'acc score: {auc}\n')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -72,7 +76,7 @@ if __name__ == '__main__':
     parser.add_argument('--load_split', type=str, nargs='?')
     parser.add_argument('--perturb', action="store_true")
     parser.add_argument('--attack_method', type=str, default=None)
-    parser.add_argument('--attack_prop', type=float, default=0.05)
+    parser.add_argument('--attack_rate', type=float, default=0.05)
     parser.add_argument('--drop_prop', type=float, default=0.20)
     parser.add_argument('--dropout', type=float, default=0)
     default_param = {
@@ -120,9 +124,16 @@ if __name__ == '__main__':
 
     if args.perturb:
         try:
-            perturbed_adj = pkl.load(open('poisoned_adj/%s_%s_%f_adj.pkl' % (args.dataset, args.attack_method, args.attack_rate), 'rb')).to(device)
+            '''uncomment this to use regular perturbed adj matrix'''
+            # perturbed_adj = pkl.load(open('poisoned_adj/%s_%s_%f_adj.pkl' % (args.dataset, args.attack_method, args.attack_rate), 'rb')).to(device) 
+            '''uncomment this to use synthetic perturbed adj matrix'''
+            perturbed_adj = pkl.load(open('../NetGAN-torch/data/%s_%s_%f_synthetic.pkl' % (args.dataset, args.attack_method, args.attack_rate), 'rb')).to(device)
         except:
-            perturbed_adj = torch.load('poisoned_adj/%s_%s_%f_adj.pkl' % (args.dataset, args.attack_method, args.attack_rate), map_location=device)
+            '''uncomment this to use regular perturbed adj matrix'''
+            # perturbed_adj = torch.load('poisoned_adj/%s_%s_%f_adj.pkl' % (args.dataset, args.attack_method, args.attack_rate), map_location=device) 
+            '''uncomment this to use synthetic perturbed adj matrix'''
+            perturbed_adj = torch.load('../NetGAN-torch/data/%s_%s_%f_synthetic.pkl' % (args.dataset, args.attack_method, args.attack_rate), map_location=device)
+            
         data.edge_index = perturbed_adj.nonzero().T
 
     data = data.to(device)
@@ -178,3 +189,6 @@ if __name__ == '__main__':
     auc = test(final=True)
     if 'final' in log:
         print(f'auc={auc}')
+    
+    # write results to the data dir in the root path
+    write_auc_to_file(auc, args.attack_method, args.attack_rate)
