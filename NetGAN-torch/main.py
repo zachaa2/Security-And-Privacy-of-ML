@@ -95,8 +95,8 @@ if __name__ == '__main__':
     # _A_obs, _X_obs, _z_obs = utils.load_npz("data/cora_ml.npz") This is from the NetGAN paper 
     
     # convert to undirected representation
-    _A_orig = _A_orig + _A_orig.T
-    _A_orig[_A_orig > 1] = 1
+    # _A_orig = _A_orig + _A_orig.T
+    # _A_orig[_A_orig > 1] = 1
 
     # consider only the largest connected component
     lcc = utils.largest_connected_components(_A_orig)
