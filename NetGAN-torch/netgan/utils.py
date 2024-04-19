@@ -56,7 +56,7 @@ def largest_connected_components(adj, n_components=1):
         Subgraph of the input graph where only the nodes in largest n_components are kept.
 
     """
-    _, component_indices = connected_components(adj)
+    _, component_indices = connected_components(adj, directed=True)
     component_sizes = np.bincount(component_indices)
     components_to_keep = np.argsort(component_sizes)[::-1][:n_components]  # reverse order to sort descending
     nodes_to_keep = [
@@ -467,7 +467,7 @@ def graph_from_scores(scores, n_edges):
         target_g[(triu_ixs[0][extra_edges], triu_ixs[1][extra_edges])] = 1
         target_g[(triu_ixs[1][extra_edges], triu_ixs[0][extra_edges])] = 1
 
-    target_g = symmetric(target_g)
+    # target_g = symmetric(target_g)
     return target_g
 
 

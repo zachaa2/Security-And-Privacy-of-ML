@@ -11,6 +11,8 @@ import networkx as nx
 import argparse
 from scipy.sparse import csr_matrix, lil_matrix
 import pickle as pkl
+import networkx as nx
+
 
 def load_matrix_from_pickle(file_path):
     """Load a csr SparseMatrix object from a pickle file."""
@@ -71,7 +73,21 @@ def write_logs(logs, method, rate):
     file_path = f'data/Cora_{method}_{rate:.6f}_logs.pkl'
     with open(file_path, 'wb') as f:
         pkl.dump(logs, f)
+
+def csr_matrices_equal(mat1, mat2):
+    # Check if both matrices have the same shape
+    if mat1.shape != mat2.shape:
+        return False
     
+    # Check if both matrices have the same number of non-zero entries
+    if mat1.nnz != mat2.nnz:
+        return False
+    
+    # Check if both matrices have the same data in the same positions
+    if not (mat1 != mat2).nnz == 0:
+        return False
+    
+    return True
 
 if __name__ == '__main__':
     # get args
@@ -93,16 +109,17 @@ if __name__ == '__main__':
     ### load the data
     _A_orig = load_matrix_from_pickle(file_path=file_path) # This is for the experiments
     # _A_obs, _X_obs, _z_obs = utils.load_npz("data/cora_ml.npz") This is from the NetGAN paper 
-    
-    # convert to undirected representation
-    # _A_orig = _A_orig + _A_orig.T
-    # _A_orig[_A_orig > 1] = 1
 
-    # consider only the largest connected component
-    lcc = utils.largest_connected_components(_A_orig)
-    _A_obs = _A_orig[lcc, :][:, lcc]
-    _N = _A_obs.shape[0]
+    '''largest weakly connected component'''
+    G = nx.from_scipy_sparse_array(_A_orig, create_using=nx.DiGraph)
+    wcc = max(nx.weakly_connected_components(G), key=len)
+    orig_indices = np.array(list(wcc))
+    G_lcc = G.subgraph(wcc).copy()
+    # Convert the subgraph back to a CSR matrix
+    numpy_array = nx.to_numpy_array(G_lcc)
+    _A_obs = csr_matrix(numpy_array)
     
+    _N = _A_obs.shape[0]
     # get splits 
     val_share = 0.1
     test_share = 0.05
@@ -113,7 +130,7 @@ if __name__ == '__main__':
 
     train_ones, val_ones, val_zeros, test_ones, test_zeros = utils.train_val_test_split_adjacency(_A_obs, val_share,
                                                                                                   test_share, seed,
-                                                                                                  undirected=True,
+                                                                                                  undirected=False,
                                                                                                   connected=True,
                                                                                                   asserts=True)
 
@@ -155,14 +172,30 @@ if __name__ == '__main__':
     # print(type(synthetic_lcc))
 
     # get the new full graph by adding back the synthetic generated lcc into the original graph
-    new_g = reintegrate_synthetic_lcc(_A_orig, lcc, synthetic_lcc)
+    '''reintegrate the lcc adj matrix'''
+    # reintegrate the lcc back into the full graph
+    new_full_csr = csr_matrix(_A_orig.shape, dtype=np.int8)
+    full_lil = new_full_csr.tolil()
 
+    # copy original edges that are not in lcc
+    for i, j in zip(*_A_orig.nonzero()):
+        if i not in orig_indices or j not in orig_indices:
+            full_lil[i, j] = 1
+    
+    # copy edges from new lcc back into the full graph
+    for i, j in zip(*synthetic_lcc.nonzero()):
+        orig_i, orig_j = orig_indices[i], orig_indices[j]
+        full_lil[orig_i, orig_j] = synthetic_lcc[i, j]
+
+    final_csr = full_lil.tocsr()
+    
+    '''write to file'''
     # write new synthetic graph to binary
-    write_graph(new_g, args.method, args.rate)
+    write_graph(final_csr, args.method, args.rate)
     # write_logs(log_dict, args.method, args.rate)
 
     # convert generated and original adj matrices to networkx graphs
-    G = nx.from_scipy_sparse_array(new_g)
+    G = nx.from_scipy_sparse_array(final_csr)
     OG = nx.from_scipy_sparse_array(_A_orig)
 
     # EDA
