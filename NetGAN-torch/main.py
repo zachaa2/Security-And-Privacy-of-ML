@@ -110,6 +110,9 @@ if __name__ == '__main__':
     _A_orig = load_matrix_from_pickle(file_path=file_path) # This is for the experiments
     # _A_obs, _X_obs, _z_obs = utils.load_npz("data/cora_ml.npz") This is from the NetGAN paper 
 
+    _A_orig = _A_orig + _A_orig.T
+    _A_orig[_A_orig > 1] = 1
+
     '''largest weakly connected component'''
     G = nx.from_scipy_sparse_array(_A_orig, create_using=nx.DiGraph)
     wcc = max(nx.weakly_connected_components(G), key=len)
@@ -130,7 +133,7 @@ if __name__ == '__main__':
 
     train_ones, val_ones, val_zeros, test_ones, test_zeros = utils.train_val_test_split_adjacency(_A_obs, val_share,
                                                                                                   test_share, seed,
-                                                                                                  undirected=False,
+                                                                                                  undirected=True,
                                                                                                   connected=True,
                                                                                                   asserts=True)
 
@@ -162,7 +165,7 @@ if __name__ == '__main__':
     # eval_every = 2
 
     log_dict = train(netG, netD, _N, rw_len, val_ones, val_zeros, batch_size, walk.walk, _A_obs,
-                    device=device, stopping=stopping, eval_every=eval_every, max_patience=20, max_iters=20000)
+                    device=device, stopping=stopping, eval_every=eval_every, max_patience=20, max_iters=20)
     # log_dict = train(netG, netD, _N, rw_len, val_ones, val_zeros, batch_size, walk.walk, _A_obs,
     #                 device=device, stopping=stopping, eval_every=eval_every, max_patience=20, max_iters=10)
     print(log_dict.keys())
