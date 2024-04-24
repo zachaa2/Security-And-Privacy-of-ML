@@ -33,6 +33,8 @@
 \usepackage{microtype}      % microtypography
 \usepackage{xcolor}         % colors
 \usepackage{cite}
+\usepackage{graphicx}
+\usepackage{amsmath}
 \newcommand{\aaron}[2]{{\color{orange}\bfseries [aaron: #1]}}
 \title{Evaluating the Robustness of Synthetic Graph Data Against Poisoning Attacks}
 
@@ -73,17 +75,29 @@
 \section{Introduction}
 \label{Intro}
 
+In this section, I introduce the problem statement for this work, as well as some related key ideas. I establish motivation for this work, and convey key hypotheses this work aims to evaluate. 
+
+\subsection{Graph Data}
+
 Graph data is an important and ubiquitous method of representing relationships between entities. The beauty of graphs is that they are an incredibly flexible way to represent relational data. As a result, graphs have application in all types of fields, including social networks \cite{socialnetworks}, biological networks \cite{Girvan_2002}, and voting networks \cite{votingnetworks}. Real world graph data often contains a trove of information, in regards to both local and global characteristics. These graphs can also be used for various tasks, including link prediction, node classification, and community detection, among many others. Naturally, machine learning researchers have devoted considerable time and effort into exploring the applications of machine learning methods for graph data, for the sake of extracting information from a graph. Some landmark successes in this realm is with Node2Vec \cite{grover2016node2vec}, the graph neural network \cite{GNNModel}, and matrix factorization \cite{matrixfactor}. These methods are for graph representation learning. As the name implies, the goal is to learn a low dimensional embedding that represents the graph's key features. The effectiveness of machine learning methods on downstream tasks depends heavily on the quality of the learned embeddings. 
+
+\subsection{Representation Learning}
 
 Representation learning on graphs is a challenging task, because graphs are non-Euclidean and do not have a fixed structure. Moreover, the dimensional of the target embeddings plays a key role, as there is a trade-off between high dimension and low dimension embeddings \cite{DBLP:journals/corr/abs-1909-00958}. Higher dimension embeddings preserve more graphical information, but at the cost of storage and computation. Lower dimension embeddings can potentially remove noise and are more space efficient, but they may lose some critical information about the graph. 
 
 One of the most dominant approaches to graph representation learning is Graph Neural Networks (GNNs). GNNs take as input the graph structure, typically represented as an adjacency matrix. Then they learn embeddings from the graph structure to obtain a useful representation of the original graph structure. Like other deep learning methods, GNNs tend to over fit on the given graph structure \cite{bechlerspeicher2024graph}.
 
+\subsection{Synthetic Graph Generation}
+
 One of the effective ways to tackle representation learning on graphs is through applying synthetic graph generation. Synthetic graph generation is the process of algorithmic creation of graph data, instead of through real world data collection. In the context of representation learning, synthetic graph generation methods can be used for data augmentation. Augmentation of data is a particularly useful technique because it improves the generalization of deep learning models, which can prevent over fitting. In fact data augmentation approaches have shown to be useful in graph classification \cite{gmixup} and in class-imbalanced node classification \cite{graphmixup} settings.  
 
 Synthetic graph generation also had the added benefit of being more practical to source than real world graph data. Real data requires observation and data collection, which is often a time consuming and expensive process. Synthetic graph generation on the other hand, requires implementing and executing an algorithm, which is more cost effective in terms of both time and money. In many cases, generator algorithms require some real data to learn a distribution. However because these algorithms can scale better than real data sourcing, algorithmic generation will still be more effective since it will be able to generate a large synthetic graph with a similar distribution, faster than it would take for researchers to observe and collect the data themselves. Thus, there is significant monetary and efficiency incentives for applying synthetic graph generation algorithms. 
 
+\subsection{Poisoning Attacks}
+
 As mentioned, graphs are a flexible way to model real world relations. However, often they are created from observation of accessible and easy to manipulate data, like ego networks, computer networks or web page networks. Since this data is sourced from the public domain, they are vulnerable to adversarial poisoning attacks. Poisoning attacks are adversarial attacks that are applied to a training dataset before it is used to train a model, with the goal of decreasing the model's effectiveness. In the context of graph representation learning, this means reducing the quality of the learned embeddings. Even though poisoning attacks involve manipulating the training set, in many cases an adversary may not need white-box access to do so. Consider a situation where a system supporting a public service has a bunch of users, and the administrators would like to support link prediction for a recommend service. To make this work, they would need need to make a network of their users and implement a link prediction algorithm. To degrade the performance of a downstream task such as link prediction, an adversary need only make accounts to poison the network. Such situations are perfectly feasible in a real world setting. 
+
+\subsection{Main Goals}
 
 This project aims to explore the robustness of synthetic graph data against graph poisoning attacks. The intuition is that synthetic data is easier to scale and may be more generalized. Thus, small perturbations made from a poisoning attack will have a reduced adverse effect on the learned embeddings. Existing work has shown that other defense mechanisms may not be useful in practice because they may drastically harm the generalization performance, or may simply be attack specific \cite{liu2023friendly}. Synthetic generation is extensible to any dataset of any type, and retains the generalization capabilities of the trained model. Thus, it may serve as a desirable way to defend, or at least mitigate the adverse effects of poisoning attacks. It may also be the case that applying synthetic algorithms on poisoned data only magnifies the effects. Previous work also notes that even small augmentations to the training data, such as altering the presence of nodes/edges, can result in a significant performance drop. Another feasible outcome is that adversarial perturbations compounded with data augmentation changes the graph structure too much, such that the learned embeddings are no longer useful for any downstream tasks. This work aims to empirically evaluate the robustness of synthetic data against poisoning attacks, and determine which hypothesized outcome is reality. 
 
@@ -93,252 +107,81 @@ This project aims to explore the robustness of synthetic graph data against grap
 \aaron{talk about the background of synthetic generation models, but dont do the whole survey yet}{}
 \aaron{also establish some definitions...}{}
 
-Early methods for algorithmic graph generation come from random graph models, such as Barabasi-Albert \cite{barabasi-albert} or Chung-Lu models \cite{chunglu}. However, these models are probabilistic models that operate under certain constraints. For example, the Chung-Lu model can generate a random undirected graph, but only with a certain provided expected degree distribution. 
+A graph $G$ is typically defined by $G = (V, E)$, where $V=\{v_1, ..., v_n\}$ is the set of $n$ vertices (or nodes) and $E=\{(u, v)\ |\ u, v \in V\}$ is the set of edges. Typically, we denote $n = |V|$ and $m = |E|$ as the sizes of the vertex set and edge set respoectively. Vertices and edges fully define a graph, but they are also typically represented in matrix form as an adjacency matrix. For a graph with $n$ vertices, an adjacency matrix $A \in\mathbb{R}^{n\times n}$, will have a 1 at element $A_{ij}$ is an edge exists between vertex $i$ and vertex $j$, and a 0 otherwise. Graphs may also have a vertex feature matrix, $\emph{X} \in \mathbb{R}^{n\times d}$, where $d$ is the dimension of the feature vector for some vertex $v_i \in V$. In the case where the graph is undirected, the adjacency matrix will be symmetric i.e., $A_{ij} = A_{ji}$. In many works, including this one, a directed graph will be used and will be converted to the undirected  matrix representation $A_{sym}$ in the following manner. 
+\[
+A_{sym} = A + A^T\ |\ if A_{ij} > 1: A_{ij} = 1\ \forall\ i,j \in \{1...n\}
+\]
 
+The most commonly studied class of graph are simple graphs, which are graphs that have no multi edges or self loops. For graphs with no multi edges, the adjacency matrix $A$ will be a binary matrix, meaning all entries will be either 0 or 1, indicating the presence or absence of an edge. For graphs with no self loops, this means that the diagonal will be 0, i.e., $A_{ii}=0\ \forall i \in \{1...n\}$. This indicates that no edge will have both endpoints on the same vertex. This work will consider only methods and experiments on simple graphs.
 
-
-
-
-
-\section{Headings: first level}
-\label{headings}
-
-\subsection{Headings: second level}
-
-\subsubsection{Headings: third level}
-
-\paragraph{Paragraphs}
-
-
-There is also a \verb+\paragraph+ command available, which sets the heading in
-bold, flush left, and inline with the text, with the heading followed by 1\,em
-of space.
-
-
-\section{Citations, figures, tables, references}
-\label{others}
-
-
-These instructions apply to everyone.
-
-
-\subsection{Citations within the text}
-
-
-The \verb+natbib+ package will be loaded for you by default.  Citations may be
-author/year or numeric, as long as you maintain internal consistency.  As to the
-format of the references themselves, any style is acceptable as long as it is
-used consistently.
-
-
-The documentation for \verb+natbib+ may be found at
-\begin{center}
-  \url{http://mirrors.ctan.org/macros/latex/contrib/natbib/natnotes.pdf}
-\end{center}
-Of note is the command \verb+\citet+, which produces citations appropriate for
-use in inline text.  For example,
-\begin{verbatim}
-   \citet{hasselmo} investigated\dots
-\end{verbatim}
-produces
-\begin{quote}
-  Hasselmo, et al.\ (1995) investigated\dots
-\end{quote}
-
-
-If you wish to load the \verb+natbib+ package with options, you may add the
-following before loading the \verb+neurips_2023+ package:
-\begin{verbatim}
-   \PassOptionsToPackage{options}{natbib}
-\end{verbatim}
-
-
-If \verb+natbib+ clashes with another package you load, you can add the optional
-argument \verb+nonatbib+ when loading the style file:
-\begin{verbatim}
-   \usepackage[nonatbib]{neurips_2023}
-\end{verbatim}
-
-
-As submission is double blind, refer to your own published work in the third
-person. That is, use ``In the previous work of Jones et al.\ [4],'' not ``In our
-previous work [4].'' If you cite your other papers that are not widely available
-(e.g., a journal paper under review), use anonymous author names in the
-citation, e.g., an author of the form ``A.\ Anonymous'' and include a copy of the anonymized paper in the supplementary material.
-
-
-\subsection{Footnotes}
-
-
-Footnotes should be used sparingly.  If you do require a footnote, indicate
-footnotes with a number\footnote{Sample of the first footnote.} in the
-text. Place the footnotes at the bottom of the page on which they appear.
-Precede the footnote with a horizontal rule of 2~inches (12~picas).
-
-
-Note that footnotes are properly typeset \emph{after} punctuation
-marks.\footnote{As in this example.}
-
-
-\subsection{Figures}
-
-
-\begin{figure}
-  \centering
-  \fbox{\rule[-.5cm]{0cm}{4cm} \rule[-.5cm]{4cm}{0cm}}
-  \caption{Sample figure caption.}
+\begin{figure}[h]
+\centering
+\includegraphics[scale=1.0]{figures/SimpleGraph.png}
+\caption{Simple vs. Non-Simple Graphs from \cite{simplegraphweisstein}}
+\label{SimpleGraph}
 \end{figure}
 
+\subsection{Algorithmic Graph Creation}
 
-All artwork must be neat, clean, and legible. Lines should be dark enough for
-purposes of reproduction. The figure number and caption always appear after the
-figure. Place one line space before the figure caption and one line space after
-the figure. The figure caption should be lower case (except for first word and
-proper nouns); figures are numbered consecutively.
+Given the established formulation of a graph, we can define the problem of algorithmic graph generation as follows. Given a graph $G$ or a dataset of graphs $D_G$, with the underlying distribution $p(G)$, the goal is to construct a new graph $G_{new}$ that has a similar distribution. Obtaining the distribution $p(G)$ of a graph or set of graphs can be done in two main ways: \begin{enumerate}
+  \setlength\itemsep{0.1em}
+  \item \emph{Prescribed Graph Generation}: Taking a distribution or a set of parameters as input (could be mined from the original graph or user-generated)
+  \item \emph{Deep Graph Generation}: Learning the distribution from the graph and sampling from it to construct $G_{new}$
+\end{enumerate}
 
+\paragraph{Prescribed Graph Generation} 
 
-You may use color figures.  However, it is best for the figure captions and the
-paper body to be legible if the paper is printed in either black/white or in
-color.
+Some long-standing and well-researched methods for algorithmic graph generation are prescribed generative models. These prescribed generative methods are designed to encapsulate and recreate a defined set of statistical graph properties. Some earlier examples come from random graph models, such as Barabasi-Albert \cite{barabasi-albert} or Chung-Lu models \cite{chunglu}. These models are probabilistic models that operate under certain constraints. For example, the Chung-Lu model can generate a random undirected graph, but only with a certain provided expected degree distribution. 
 
+\paragraph{Deep Graph Generation}
 
-\subsection{Tables}
+In recent years, methods involving deep neural networks (DNNs) have increased in popularity. This approach employs a deep neural network to learn how to obtain new samples from the distribution. This can be done by learning  estimated $p(G)$ first, and sampling from the estimated distribution, or by using an implicit strategy, which learns how to sample from the true distribution without actually estimating it. 
 
+\subsection{Graph Poisoning Attacks}
 
-All tables must be centered, neat, clean and legible.  The table number and
-title always appear before the table.  See Table~\ref{sample-table}.
+Poisoning attack are simply training phase attacks where an adversary adds malicious samples to the training dataset. These adversarial attacks were first formalized in Netattack \cite{netattack}, and was seperated into two paradigms in TDGIA \cite{TDGIA}. The two main paradigns for training time adversarial attacks are: (1) graph modification attacks (GMA) and (2) graph injection attacks (GIA). 
 
+\paragraph{Graph Modification Attacks}
 
-Place one line space before the table title, one line space after the
-table title, and one line space after the table. The table title must
-be lower case (except for first word and proper nouns); tables are
-numbered consecutively.
+Recall the graph $G$ with adjacency matrix $A$ and feature matrix $X$. Let $\mathcal{M}:G\rightarrow \{1,2,...,C\}^N$ be a model that predicts labels for all $n$ vertices in $G$. We will denote the predictions as $\mathcal{M}(G)$. The goal of the GMA paradigm is to minimize the number of correct predictions made by $\mathcal{M}$ on the set of target vertices $\mathcal{T}$ by perturbing the original graph $G$:
 
+\begin{equation}
+\label{GMA}
+\begin{split}
+& \min_{G'}|\{\mathcal{M}(G')_i=y_i, i\in\mathcal{T}\}| \\
+s.t.\ & G'=(A', \ X'),f_{\Delta_{A}}(A'-A)+f_{\Delta_{X}}(X'-X)\leq\Delta
+\end{split}    
+\end{equation}
 
-Note that publication-quality tables \emph{do not contain vertical rules.} We
-strongly suggest the use of the \verb+booktabs+ package, which allows for
-typesetting high-quality, professional tables:
-\begin{center}
-  \url{https://www.ctan.org/pkg/booktabs}
-\end{center}
-This package was used to typeset Table~\ref{sample-table}.
+where $G'$ is the perturbed graph, $y_i$ is the ground truth label for vertex $i$, and $f_{\Delta_{\mathbf{A}}}$ and $f_{\Delta_{\mathbf{F}}}$ are functions that measure the amount of perturbation. The $\Delta$ bound constrains the adversary to be able to perturb the graph only by a certain amount. 
 
+\paragraph{Graph Injection Attacks}
+GMA introduces perturbations on $G$'s structure and features. GIA on the other hand, will preserve the original graph's vertices and corresponding features, and simply inject $N_I$ new vertices into the graph. The objective of GIA is formalized as:
+\begin{equation}
+\label{GIA}
+\begin{split}
+& \min_{\mathbf{G}'} |\{\mathcal{M}(G')_i=y_i, i\in\mathcal{T}\}| \\
+s.t.\ & G'=(A',X'), N_I \leq b, deg(v)_{v\in I}\leq d, ||\ X_I||\leq \Delta_X
+\end{split}
+\end{equation}
 
-\begin{table}
-  \caption{Sample table title}
-  \label{sample-table}
-  \centering
-  \begin{tabular}{lll}
-    \toprule
-    \multicolumn{2}{c}{Part}                   \\
-    \cmidrule(r){1-2}
-    Name     & Description     & Size ($\mu$m) \\
-    \midrule
-    Dendrite & Input terminal  & $\sim$100     \\
-    Axon     & Output terminal & $\sim$10      \\
-    Soma     & Cell body       & up to $10^6$  \\
-    \bottomrule
-  \end{tabular}
-\end{table}
+where $I$ is the set of injected vertices. $N_I$ is limited by a budget $b$, each vertex's degree is limited by a budget $d$ and the norm of the feature matrix of the injected vertices, $X_I$ is limited by $\Delta_X$.
+\\
+\\
+One key difference between the two paradigms is that the GMA approach does not modify the shape of the adjacency matrix, but will apply perturbations to it. However, GIA will produce an adjacency matrix with a different change to the original, but will not perturb the original matrix at all. For ease of computation, I consider only GMA methods in this work, as their perturbations lie within the original adjacency matrix and not outside it. Retaining the shape of the adjacency matrix allows for a seamless transition through the experimental pipeline.
 
-\subsection{Math}
-Note that display math in bare TeX commands will not create correct line numbers for submission. Please use LaTeX (or AMSTeX) commands for unnumbered display math. (You really shouldn't be using \$\$ anyway; see \url{https://tex.stackexchange.com/questions/503/why-is-preferable-to} and \url{https://tex.stackexchange.com/questions/40492/what-are-the-differences-between-align-equation-and-displaymath} for more information.)
+\section{Related Work}
+\label{RelatedWork}
 
-\subsection{Final instructions}
-
-Do not change any aspects of the formatting parameters in the style files.  In
-particular, do not modify the width or length of the rectangle the text should
-fit into, and do not change font sizes (except perhaps in the
-\textbf{References} section; see below). Please note that pages should be
-numbered.
+\section{Methods}
+\label{Methods}
 
 
-\section{Preparing PDF files}
+\section{Results}
+\label{Results}
 
-
-Please prepare submission files with paper size ``US Letter,'' and not, for
-example, ``A4.''
-
-
-Fonts were the main cause of problems in the past years. Your PDF file must only
-contain Type 1 or Embedded TrueType fonts. Here are a few instructions to
-achieve this.
-
-
-\begin{itemize}
-
-
-\item You should directly generate PDF files using \verb+pdflatex+.
-
-
-\item You can check which fonts a PDF files uses.  In Acrobat Reader, select the
-  menu Files$>$Document Properties$>$Fonts and select Show All Fonts. You can
-  also use the program \verb+pdffonts+ which comes with \verb+xpdf+ and is
-  available out-of-the-box on most Linux machines.
-
-
-\item \verb+xfig+ "patterned" shapes are implemented with bitmap fonts.  Use
-  "solid" shapes instead.
-
-
-\item The \verb+\bbold+ package almost always uses bitmap fonts.  You should use
-  the equivalent AMS Fonts:
-\begin{verbatim}
-   \usepackage{amsfonts}
-\end{verbatim}
-followed by, e.g., \verb+\mathbb{R}+, \verb+\mathbb{N}+, or \verb+\mathbb{C}+
-for $\mathbb{R}$, $\mathbb{N}$ or $\mathbb{C}$.  You can also use the following
-workaround for reals, natural and complex:
-\begin{verbatim}
-   \newcommand{\RR}{I\!\!R} %real numbers
-   \newcommand{\Nat}{I\!\!N} %natural numbers
-   \newcommand{\CC}{I\!\!\!\!C} %complex numbers
-\end{verbatim}
-Note that \verb+amsfonts+ is automatically loaded by the \verb+amssymb+ package.
-
-
-\end{itemize}
-
-
-If your file contains type 3 fonts or non embedded TrueType fonts, we will ask
-you to fix it.
-
-
-\subsection{Margins in \LaTeX{}}
-
-
-Most of the margin problems come from figures positioned by hand using
-\verb+\special+ or other commands. We suggest using the command
-\verb+\includegraphics+ from the \verb+graphicx+ package. Always specify the
-figure width as a multiple of the line width as in the example below:
-\begin{verbatim}
-   \usepackage[pdftex]{graphicx} ...
-   \includegraphics[width=0.8\linewidth]{myfile.pdf}
-\end{verbatim}
-See Section 4.4 in the graphics bundle documentation
-(\url{http://mirrors.ctan.org/macros/latex/required/graphics/grfguide.pdf})
-
-
-A number of width problems arise when \LaTeX{} cannot properly hyphenate a
-line. Please give LaTeX hyphenation hints using the \verb+\-+ command when
-necessary.
-
-
-\begin{ack}
-Use unnumbered first level headings for the acknowledgments. All acknowledgments
-go at the end of the paper before the list of references. Moreover, you are required to declare
-funding (financial activities supporting the submitted work) and competing interests (related financial activities outside the submitted work).
-More information about this disclosure can be found at: \url{https://neurips.cc/Conferences/2023/PaperInformation/FundingDisclosure}.
-
-
-Do {\bf not} include this section in the anonymized submission, only in the final paper. You can use the \texttt{ack} environment provided in the style file to autmoatically hide this section in the anonymized submission.
-\end{ack}
-
-
-
-\section{Supplementary Material}
-
-Authors may wish to optionally include extra information (complete proofs, additional experiments and plots) in the appendix. All such materials should be part of the supplemental material (submitted separately) and should NOT be included in the main submission.
+\section{Discussion}
+\label{Discussion}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \nocite{*}
