@@ -104,9 +104,6 @@ This project aims to explore the robustness of synthetic graph data against grap
 \section{Background}
 \label{background}
 
-\aaron{talk about the background of synthetic generation models, but dont do the whole survey yet}{}
-\aaron{also establish some definitions...}{}
-
 A graph $G$ is typically defined by $G = (V, E)$, where $V=\{v_1, ..., v_n\}$ is the set of $n$ vertices (or nodes) and $E=\{(u, v)\ |\ u, v \in V\}$ is the set of edges. Typically, we denote $n = |V|$ and $m = |E|$ as the sizes of the vertex set and edge set respoectively. Vertices and edges fully define a graph, but they are also typically represented in matrix form as an adjacency matrix. For a graph with $n$ vertices, an adjacency matrix $A \in\mathbb{R}^{n\times n}$, will have a 1 at element $A_{ij}$ is an edge exists between vertex $i$ and vertex $j$, and a 0 otherwise. Graphs may also have a vertex feature matrix, $\emph{X} \in \mathbb{R}^{n\times d}$, where $d$ is the dimension of the feature vector for some vertex $v_i \in V$. In the case where the graph is undirected, the adjacency matrix will be symmetric i.e., $A_{ij} = A_{ji}$. In many works, including this one, a directed graph will be used and will be converted to the undirected  matrix representation $A_{sym}$ in the following manner. 
 \[
 A_{sym} = A + A^T\ |\ if A_{ij} > 1: A_{ij} = 1\ \forall\ i,j \in \{1...n\}
@@ -139,7 +136,7 @@ In recent years, methods involving deep neural networks (DNNs) have increased in
 
 \subsection{Graph Poisoning Attacks}
 
-Poisoning attack are simply training phase attacks where an adversary adds malicious samples to the training dataset. These adversarial attacks were first formalized in Netattack \cite{netattack}, and was seperated into two paradigms in TDGIA \cite{TDGIA}. The two main paradigns for training time adversarial attacks are: (1) graph modification attacks (GMA) and (2) graph injection attacks (GIA). 
+Poisoning attack are simply training phase attacks where an adversary adds malicious samples to the training dataset. These adversarial attacks were first formalized in Netattack \cite{netattack}, and was separated into two paradigms in TDGIA \cite{TDGIA}. The two main paradigms for training time adversarial attacks are: (1) graph modification attacks (GMA) and (2) graph injection attacks (GIA). 
 
 \paragraph{Graph Modification Attacks}
 
@@ -173,15 +170,48 @@ One key difference between the two paradigms is that the GMA approach does not m
 \section{Related Work}
 \label{RelatedWork}
 
+In this section, I introduce the relevant prior works as it related to the experiments done in this work. All the works discussed in this section are works that contribute to the subsequent experiments. 
+
+\subsection{Deep Graph Generation}
+
+As mentioned earlier, deep graph generation has seen increasing interest in recent years. Within the realm of deep generative models, there exist a variety of approaches, each using a different methodology and model architecture. For relevant state-of-the-art surveys of deep generative models for graph generation, see \cite{guo2022survey}, and \cite{zhu2022survey}. In general, they follow the following encoder $\rightarrow$ sampler$\rightarrow$ decoder pipeline as described in \cite{zhu2022survey}: 
+
+\paragraph{Encoder} An encoding function $f_{\Theta}(\mathbf{z}\ |\ G)$ takes the discrete graph matrices and represent then as low dimensional continuous vector, following a stochastic distribution. Typically, probabilistic generative models are used as the encoder (e.g.,  variational graph neural networks).
+
+\paragraph{Sampler} Graph generation requires sampling a latent representation from the learned distribution $z \sim p(z)$. The sampling strategy employed is either random sampling or controllable sampling. 
+
+\paragraph{Decoder} The decoder takes the samples latent representations and converts them back into a graph structure. This is a challenging task, since graphs are discrete, non-Euclidean objects. The two generative strategies are \emph{sequential generation} and \emph{one-shot generation}.
+\\
+\\
+Note that not every deep generative model need necessarily have all the components described above, but they follow the same approach generally. 
+
+\subsubsection{NetGAN}
+
+One such deep generative model is the NetGAN \cite{bojchevski2018netgan} model. 
+
+
+
+\subsection{Adversarial Attacks on Graphs}
+
+
+
+\subsection{Graph Neural Networks}
+
+
+\aaron{Talk about the relevant papers used in the experiments here. A subsection for synthetix graph method and for attacks, and subsubsection for each individual method}{}
+
 \section{Methods}
 \label{Methods}
-
+\aaron{Introduce the experimental design here, like the experiment pipeline (maybe a graphs? Also explain the downstream prediction tasks}{}
 
 \section{Results}
 \label{Results}
+\aaron{put tables for all results and observations here}{}
 
 \section{Discussion}
 \label{Discussion}
+\aaron{discuss the results and make the final key conclusions here}{}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \nocite{*}
