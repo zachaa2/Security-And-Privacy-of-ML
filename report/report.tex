@@ -35,6 +35,10 @@
 \usepackage{cite}
 \usepackage{graphicx}
 \usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{float}
+\usepackage{lipsum}
+\usepackage{mwe}
 \newcommand{\aaron}[2]{{\color{orange}\bfseries [aaron: #1]}}
 \title{Evaluating the Robustness of Synthetic Graph Data Against Poisoning Attacks}
 
@@ -64,11 +68,7 @@
 
 
 \begin{abstract}
-  The abstract paragraph should be indented \nicefrac{1}{2}~inch (3~picas) on
-  both the left- and right-hand margins. Use 10~point type, with a vertical
-  spacing (leading) of 11~points.  The word \textbf{Abstract} must be centered,
-  bold, and in point size 12. Two line spaces precede the abstract. The abstract
-  must be limited to one paragraph.
+  Synthetic graph generation is a useful alternate technique to generate graphs cheaper and at scale. Given a set of prescriptions or graph, they can produce a new synthetic graph with similar features. However, in real world settings graph data can be easy to attack, typically by poisoning the network. This work empirically evaluated the robustness of synthetic generators against adversarial graph attacks. In this work an experimental workflow is designed, and results on node classification and link predication is observed. Based on the observations, compounding synthetic generators with a pre-poisoned graph severely impacts the performance of GNNs on downstream tasks. As a result, solutions for future work are mentioned.
 \end{abstract}
 
 
@@ -103,6 +103,10 @@ This project aims to explore the robustness of synthetic graph data against grap
 
 \section{Background}
 \label{background}
+
+In this section, I formulate the problem and establish key definitions and concepts that are related to the following experiments and discussion. 
+
+\subsection{Graph Data}
 
 A graph $G$ is typically defined by $G = (V, E)$, where $V=\{v_1, ..., v_n\}$ is the set of $n$ vertices (or nodes) and $E=\{(u, v)\ |\ u, v \in V\}$ is the set of edges. Typically, we denote $n = |V|$ and $m = |E|$ as the sizes of the vertex set and edge set respoectively. Vertices and edges fully define a graph, but they are also typically represented in matrix form as an adjacency matrix. For a graph with $n$ vertices, an adjacency matrix $A \in\mathbb{R}^{n\times n}$, will have a 1 at element $A_{ij}$ is an edge exists between vertex $i$ and vertex $j$, and a 0 otherwise. Graphs may also have a vertex feature matrix, $\emph{X} \in \mathbb{R}^{n\times d}$, where $d$ is the dimension of the feature vector for some vertex $v_i \in V$. In the case where the graph is undirected, the adjacency matrix will be symmetric i.e., $A_{ij} = A_{ji}$. In many works, including this one, a directed graph will be used and will be converted to the undirected  matrix representation $A_{sym}$ in the following manner. 
 \[
@@ -187,31 +191,133 @@ Note that not every deep generative model need necessarily have all the componen
 
 \subsubsection{NetGAN}
 
-One such deep generative model is the NetGAN \cite{bojchevski2018netgan} model. 
+One such deep generative model is the NetGAN \cite{bojchevski2018netgan} model. NetGAN is a Generative Adversarial Network model for graph data, that leverages random walks to learn the topology of a given graph. The model first sample a bunch of random walk, which become the training set. Like other traditional GAN architectures, there is a Generator and Discriminator. The Generator's goal is to generate synthetic random walks that are plausible on the input graph. The Discriminator's goal is the distinguish synthetic random walks from the real random walks that were sampled from the input graph. The Generator and Discriminator are trained end-to-end via back-propagation. 
 
-
+At any point in the training phase, one can use the Generator to create a set of random walks, which can then be turned into an adjacency matrix of a resulting synthetic graph. This is done by first using the Generator and provided set of random walks to construct a score matrix $\mathbf{S}$ of transition counts. The transition counts are simply how often an edge appears in the given set of random walks. The score matrix can then be turned into a binary adjacency matrix by first symmetrizing $\mathbf{S}$ (i.e., $s_{ij}=s_{ji}=\max\{s_{ij},s_{ji}\}$) and employing a binarization strategy. 
 
 \subsection{Adversarial Attacks on Graphs}
 
+Adversarial attacks on graphs is a field of study that has gained increasing interest in recent years. The main goal of adversarial attacks is to perturb the graph in order to degrade the quality of learned embeddings. There are two key attack paradigms: \textbf{Unsupervised Attacks} and \textbf{Supervised Attacks}. The main difference between these paradigms is that supervised attacks require the labels, and unsupervised attacks do not. In this work, I experiment with both supervised and unsupervised attacks. 
 
+\subsubsection{Random Attacks}
+
+The simplest and most naive approach to graph adversarial attacks is random perturbations. The simple random attack involves randomly selecting $\mathcal{T}$ edges in the adjacency matrix to perturb.  This is akin to simply adding an element of random noise into the graph structure. While noise will certainly affect the learned embeddings, the random attack doesn't efficiently use the perturbation budget $\mathcal{T}$ effectively since not all edges are equally important to the overall graph structure. A simple optimization to the random attack is implemented in the form of DICE, which stands for 'delete internally, connect externally' (as described in \cite{zügner2024Metattack}). As the name implies, this method will randomly perturb edges but only if the edge removed is incident on two vertices of the same class, or only if the edge added is incident on two vertices of a different class. The intuition is that adding inter-class connections and removing intra-class connections will degrade a DNN's ability to learn a proper representation. 
+
+\subsubsection{Optimization-Based Attacks}
+
+PGD and MinMax \cite{xu2019topology} are optimization based topology attacks, where they first define the attacker loss, and leverage first-order optimization to develop the attack generation methods. The attacker loss can be modeled as the \emph{negative cross-entropy (CE) loss} between the true and predicted labels as shown in \cite{goodfellow2015explaining}. In the case of attacking a pre-defined GNN with a fixed $\mathbf{W}$, the optimization problem can be formulated as
+
+\begin{equation}
+    \min_{\mathbf{s}}\ \sum_{i \in \mathcal{V}} f_i(\mathbf{s}; \mathbf{W}, \mathbf{A}, \{\mathbf{x}_i\}, y_i)   
+\end{equation}
+\[
+\text{subject to}\ \mathbf{1}^\top \mathbf{s} \leq \epsilon, \quad \mathbf{s} \in \{0, 1\}^{n}
+\]
+
+where $\mathbf{s}$ is a vector that consists of perturbation variables that describe the perturbations done on the adjacency matrix. This optimization problem is further relaxed into a continuous optimization problem for ease of optimization. The continuous optimization problem is solved by projected gradient descent, which is known as the PGD method. In the case where the GNN has re-trainable $\mathbf{W}$ the optimization problem becomes the following min-max problem. 
+
+\begin{equation}
+    \min_{\mathbf{1}^\top \mathbf{s} \leq \epsilon, \quad \mathbf{s} \in \{0, 1\}^{n}}\ 
+    \max_{\mathbf{W}} \sum_{i \in \mathcal{V}} f_i(\mathbf{s}, \mathbf{W}; \mathbf{A}, \{\mathbf{x}_i\}, y_i)
+\end{equation}
+
+As with PGD, the above optimization problem is relaxed into a continuous optimization problem. The problem is solved by first-order alternating optimization \cite{minmaxopt}, where the inner max problem is solved by gradient ascent and the outer min problem is solved by PDG.
+
+\subsubsection{Metattack}
+
+Metattack \cite{zügner2024Metattack} is another proposed graph poisoning attack that works by optimizing the meta-gradient. This approach is motivated by meta-learning, or learning to learn. Meta learning aims to make machine learning models more efficient by learning suitable hyperparamters. The main idea behind this adversarial attack algorithm is to treat the adjacency matrix as a hyperparameter, and compute the gradient of the attacker's loss after training with respect to it:
+\begin{equation}
+    \nabla_{G}^{meta} := \nabla_{G}\mathcal{L}_{atk}(f_{\theta}\cdot(G))\ \ \ s.t. \ \ \
+    \theta^{*} = \text{opt}_{\theta}(\mathcal{L}_{\text{train}}(f_{\theta}(G)))
+\end{equation}
+
+where $\text{opt}(\cdot)$ is a differentiable optimization function (e.g., gradient descent) and $\mathcal{L}_{\text{train}}$ is the training loss. The goal is to minimize the attacker loss $\mathcal{L}_{\text{atk}}$.
 
 \subsection{Graph Neural Networks}
 
+Graph Neural Networks (GNNs) are a popular way to do graph representation learning. Under the umbrella of GNNs, there are a variety of model architectures that learn embeddings for graph structures. One such approach that has resulted in state-of-the-art success is graph contrastive learning.
 
-\aaron{Talk about the relevant papers used in the experiments here. A subsection for synthetix graph method and for attacks, and subsubsection for each individual method}{}
+\subsubsection{Graph Contrastive Learning}
+
+The goal of graph contrastive learning is to learn a GNN encoder $f(X, A)$ that takes the graph structure and features as input and produces low dimensional continuous embeddings. The graph contrastive learning framework is one where the model seeks to maximize the agreement between two representations of different views \cite{zhu2020grace}. To generate different views, stochastic graph augmentation is performed on the input. A contrastive objective function is then used to force the encoded embeddings for each vertex in the different views to agree with each other and can be discriminated from embeddings of different vertices \cite{Zhu_2021_GCA}. 
 
 \section{Methods}
 \label{Methods}
-\aaron{Introduce the experimental design here, like the experiment pipeline (maybe a graphs? Also explain the downstream prediction tasks}{}
+
+The ultimate goal of this work is to explore the robustness of synthetic graph data to poisoning attacks. In particular, will synthetic graph data improve generalization and reduce the adverse effects of poisoning attacks, or will the added noise result in learned embeddings that are not useful for any downstream tasks.
+
+\subsection{Threat Model}
+
+The threat model for these experiments are quite simple. The adversary is allowed to perturb the graph structure \emph{before} a GNN is trained. This is to model real world settings, where data is sourced from public or open sources, and the sanitization quality of data cannot be guaranteed. As mentioned, these experiments do not consider injection attacks, so all the attacks used do not modify the shape of the adjacency matrix, they will simply perturb entries in the matrix (edge addition/removal). The adversary is given a fixed budget $\mathcal{T}$ of edges to perturb. For the experiments, I consider 1\%/5\%/10\% poisoning ratios, where the budget $\mathcal{T}$ is the ratio of total edges in the graph. 
+
+\subsection{Experimental Workflow}
+
+\begin{figure}[h]
+\centering
+\includegraphics[scale=0.65]{figures/ExperimentProcedure.png}
+\caption{Experimental Workflow}
+\label{exp-prcedure}
+\end{figure}
+
+The basic experimental workflow is detailed in figure \ref{exp-prcedure}. We originally start with a clean graph, with the original adjacency matrix. Then, one of the attack algorithms from Section \ref{RelatedWork} will be applied to the graph structure, producing a poisoned adjacency matrix $A_{poison}$. At this point, the obtained $A_{poison}$ is meant to represent a real world dataset under an adversarial setting, where the data is not guaranteed to be clean. From here, we apply the synthetic graph generation algorithm, NetGAN, to produce a synthetic adjacency matrix from the poisoned one. Finally, we take this synthetic poisoned adjacency matrix, and use it on some down stream tasks. To implement the attack algorithms, I build off of an existing framework from \cite{Zhang_2022}, which uses a PyTorch based adversarial learning library for images and graphs, called DeepRobust \cite{li2020deeprobust}. To utilize NetGAN, I build off of an existing implementation of NetGAN in PyTorch provided in the following repository: \url{https://github.com/JunHao-Zhu/NetGAN-torch}.
+
+\subsection{Downstream Tasks}
+
+Since we are interested on the effects of synthetic generators on poisoned data, we will compare the results of two downstream tasks using the synthetic poisoned data and the non-synthetic poisoned data. The downstream tasks used in this work are node classification and link prediction. The \textbf{Dataset} used in these experiments is the Cora dataset, with 2708 vertices and 5429 edges. The split used is a 70\%/20\%/10\% train/val/test split. 
+
+\paragraph{Node Classification} 
+The Cora dataset contains 7 classes, and vertices in the dataset lie in one of those 7 classes. The procedure for node classification will be to first train a graph contrastive model, GCA \cite{Zhu_2021_GCA} on an adjacency matrix to learn node embeddings. Then, we train a simple logistic regression model on the learned embeddings and perform classification and evaluation. The evaluation metric will be classification accuracy. 
+
+\paragraph{Link Prediction}
+For link prediction, the goal is to train a model to predict the existence of an edge between two given vertices. Again, the GCA model is trained to get learned node embeddings for a given adjacency matrix. Then, these embeddings are projected into anew latent space via a 2-layer MLP, which then is trained for link prediction with negative sampling and margin loss, as seen in \cite{Zhang_2022}.
 
 \section{Results}
 \label{Results}
-\aaron{put tables for all results and observations here}{}
+
+The results in figures \ref{fig:class1} and \ref{fig:class2} display the classification accuracy on Cora for the non-synthetic poisoned data and synthetic poisoned data respectively. As shown in the results, there is a large disparity between results obtained by only applying the attack algorithms compared to results from applying NetGAN after the attack algorithms. 
+
+\begin{figure}[H]
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=0.9\textwidth]{figures/class2.PNG}
+        \caption{Node Classification results with Non-Synthetic Poisoned Data (acc)}
+        \label{fig:class1}
+    \end{minipage}\hfill
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=0.9\textwidth]{figures/class1.PNG}
+        \caption{Node Classification results with Synthetic Poisoned Data (acc)}
+        \label{fig:class2}
+    \end{minipage}
+\end{figure}
+
+The results in figures \ref{fig:link1} and \ref{fig:link2} show the link prediction auc score for non-synthetic poisoned data and synthetic poisoned data respectively. Note that an auc score of $0.5$ is akin to random guessing. Again, there is a clear disparity between the performance of the link prediction on the real poisoned adjacency matrix compared to the adjacency matrix produced by a generator. 
+
+\begin{figure}[H]
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=0.9\textwidth]{figures/link2.PNG} 
+        \caption{Link Pred. results with Non-Synthetic Poisoned Data (auc)}
+        \label{fig:link1}
+    \end{minipage}\hfill
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=0.9\textwidth]{figures/link1.PNG} 
+        \caption{Link Pred. results with Synthetic Poisoned Data (auc)}
+        \label{fig:link2}
+    \end{minipage}
+\end{figure}
 
 \section{Discussion}
 \label{Discussion}
-\aaron{discuss the results and make the final key conclusions here}{}
 
+Based on the results obtained from these experiments, it would seem that synthetic graph data is not robust to poisoning attacks at all. In fact, compounding poisoning attacks with a synthetic generator yields a graph structure that has little to no useful information anymore, as made apparent by the low accuracy and auc scores. The NetGAN paper \cite{bojchevski2018netgan} reports very reasonable auc scores for link prediction on the Cora dataset, but when that dataset has been poisoned, the results drop significantly. These results indicate that one should be wary when applying synthetic generators to graphs in order to scale them. If such networks are easy to attack, then the resulting synthetic graph may actually be of no use. 
+
+Instead, it may be more practical to either defend against poisoning attacks by designing more robust algorithms or by implementing pr-processing steps to sanitize the dataset. A future line of would may be to apply some existing graph sanitation techniques such as \cite{zhu2023focusedcleaner} or \cite{xu2021graphSanitation} and observe if they can aide in preserving the utility of the synthetic graphs. 
+
+\footnote{Code can be viewed at: \url{https://github.com/zachaa2/Security-And-Privacy-of-ML-Project}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \nocite{*}
